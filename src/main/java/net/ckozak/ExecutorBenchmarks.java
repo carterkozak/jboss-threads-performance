@@ -136,9 +136,7 @@ public class ExecutorBenchmarks {
 
     public enum LockMode {
         NO_LOCKS,
-        SPIN_LOCK,
-        SYNCHRONIZED,
-        REENTRANT_LOCK;
+        SPIN_LOCK;
 
         void install() {
             switch (this) {
