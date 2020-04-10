@@ -43,7 +43,7 @@ public class ExecutorBenchmarks {
     // this can be used to avoid the near-empty syndrome
     static final long DELAY_CONSUMER = Long.getLong("delay.c", 0L);
 
-    @Param({"LTQ_THREAD_POOL_EXECUTOR", "LBQ_THREAD_POOL_EXECUTOR", "EQE_NO_LOCKS", "EQE_REENTRANT_LOCK", "EQE_SPIN_LOCK", "EQE_SYNCHRONIZED"})
+    @Param({"LTQ_THREAD_POOL_EXECUTOR", "LBQ_THREAD_POOL_EXECUTOR", "EQE_NO_LOCKS", "EQE_SPIN_LOCK"})
     public ExecutorType factory;
 
     @Param ({ "1", "2", "4", "8", "14", "28" })
@@ -59,9 +59,7 @@ public class ExecutorBenchmarks {
         LBQ_THREAD_POOL_EXECUTOR(LockMode.NO_LOCKS /* any value */),
         LTQ_THREAD_POOL_EXECUTOR(LockMode.NO_LOCKS /* any value */),
         EQE_NO_LOCKS(LockMode.NO_LOCKS),
-        EQE_SYNCHRONIZED(LockMode.SYNCHRONIZED),
-        EQE_SPIN_LOCK(LockMode.SPIN_LOCK),
-        EQE_REENTRANT_LOCK(LockMode.REENTRANT_LOCK);
+        EQE_SPIN_LOCK(LockMode.SPIN_LOCK);
 
         private final LockMode mode;
 
@@ -112,13 +110,6 @@ public class ExecutorBenchmarks {
                 case SPIN_LOCK:
                     // default
                     break;
-                case SYNCHRONIZED:
-                    System.setProperty("jboss.threads.eqe.tail-synchronized", "true");
-                    System.setProperty("jboss.threads.eqe.head-synchronized", "true");
-                case REENTRANT_LOCK:
-                    System.setProperty("jboss.threads.eqe.tail-spin", "false");
-                    System.setProperty("jboss.threads.eqe.head-spin", "false");
-                    break;
                 default:
                     throw new IllegalStateException("Unknown state: " + this);
             }
@@ -160,8 +151,6 @@ public class ExecutorBenchmarks {
             if (DELAY_CONSUMER > 0) {
                 Blackhole.consumeCPU(DELAY_CONSUMER);
             }
-            // not sure this one is needed
-            blackhole.consume(Thread.currentThread().getId());
         }
 
         public void submitBurst(ExecutorService executor)
