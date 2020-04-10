@@ -1,6 +1,7 @@
 package net.ckozak;
 
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -8,6 +9,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -75,23 +77,60 @@ public class ExecutorBenchmarks {
             }
             int coreThreads = Integer.parseInt(coreAndMax[0].trim());
             int maxThreads = Integer.parseInt(coreAndMax[1].trim());
+            ExecutorService executorService = createExecutor(
+                    coreThreads,
+                    maxThreads,
+                    Duration.ofMinutes(1),
+                    Executors.defaultThreadFactory());
+            startCoreThreads(executorService, coreThreads);
+            return executorService;
+        }
+
+        ExecutorService createExecutor(
+                int coreThreads,
+                int maxThreads,
+                Duration keepAliveTime,
+                ThreadFactory threadFactory) {
             if (this == LBQ_THREAD_POOL_EXECUTOR) {
                 return new ThreadPoolExecutor(coreThreads, maxThreads,
-                        1L, TimeUnit.MINUTES,
+                        keepAliveTime.toNanos(), TimeUnit.NANOSECONDS,
                         new LinkedBlockingQueue<>(),
-                        Executors.defaultThreadFactory());
+                        threadFactory);
             } else if (this == LTQ_THREAD_POOL_EXECUTOR) {
                 return new ThreadPoolExecutor(coreThreads, maxThreads,
-                    1L, TimeUnit.MINUTES,
-                    new LinkedTransferQueue<>(),
-                    Executors.defaultThreadFactory());
+                        keepAliveTime.toNanos(), TimeUnit.NANOSECONDS,
+                        new LinkedTransferQueue<>(),
+                        threadFactory);
             }
             return new EnhancedQueueExecutor.Builder()
                     .setCorePoolSize(coreThreads)
                     .setMaximumPoolSize(maxThreads)
-                    .setKeepAliveTime(Duration.ofMinutes(1))
-                    .setThreadFactory(Executors.defaultThreadFactory())
+                    .setKeepAliveTime(keepAliveTime)
+                    .setThreadFactory(threadFactory)
                     .build();
+        }
+
+        static void startCoreThreads(ExecutorService executorService, int coreThreads) {
+            // Ensure all threads have started, and aren't queued for an unexpectedly smaller pool
+            CountDownLatch threadsStartedLatch = new CountDownLatch(coreThreads);
+            CountDownLatch completionLatch = new CountDownLatch(1);
+            Runnable runnable = () -> {
+                try {
+                    threadsStartedLatch.countDown();
+                    completionLatch.await();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            };
+            for (int i = 0; i < coreThreads; i++) {
+                executorService.execute(runnable);
+            }
+            try {
+                threadsStartedLatch.await();
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
+            }
+            completionLatch.countDown();
         }
     }
 
