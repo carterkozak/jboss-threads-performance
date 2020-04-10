@@ -173,15 +173,13 @@ public class ExecutorBenchmarks {
     @State(Scope.Thread)
     public static class ExecutingTasks implements Runnable {
 
-        Blackhole blackhole;
         Future<?>[] pendingTasks;
         int burstSize;
 
         @Setup(Level.Iteration)
-        public void init(Blackhole blackhole, ExecutorBenchmarks benchmarks) {
+        public void init(ExecutorBenchmarks benchmarks) {
             burstSize = benchmarks.burstSize;
             pendingTasks = new FutureTask<?>[benchmarks.burstSize];
-            this.blackhole = blackhole;
         }
 
         @Override
