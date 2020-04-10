@@ -1,24 +1,28 @@
 package net.ckozak;
 
 import java.time.Duration;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.concurrent.locks.LockSupport;
 
 import org.jboss.threads.EnhancedQueueExecutor;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
@@ -33,10 +37,13 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 // Use a consistent heap and GC configuration to avoid confusion between JVMS with differing GC defaults.
 @Fork(
         value = 1,
-        jvmArgs = {"-Xmx2g", "-Xms2g", "-XX:+UseParallelOldGC"})
+        jvmArgs = {"-Xmx2g", "-Xms2g", "-XX:+UseParallelOldGC", "-XX:-UseBiasedLocking"})
 public class ExecutorBenchmarks {
 
-    @Param({"THREAD_POOL_EXECUTOR", "EQE_NO_LOCKS", "EQE_REENTRANT_LOCK", "EQE_SPIN_LOCK", "EQE_SYNCHRONIZED"})
+    // this can be used to avoid the near-empty syndrome
+    static final long DELAY_CONSUMER = Long.getLong("delay.c", 0L);
+
+    @Param({"LTQ_THREAD_POOL_EXECUTOR", "LBQ_THREAD_POOL_EXECUTOR", "EQE_NO_LOCKS", "EQE_REENTRANT_LOCK", "EQE_SPIN_LOCK", "EQE_SYNCHRONIZED"})
     public ExecutorType factory;
 
     @Param ({ "1", "2", "4", "8", "14", "28" })
@@ -45,8 +52,12 @@ public class ExecutorBenchmarks {
     @Param ({ "16,16", "100,200" })
     public String executorThreads;
 
+    @Param( {"1", "10", "100"})
+    public int burstSize;
+
     public enum ExecutorType {
-        THREAD_POOL_EXECUTOR(LockMode.NO_LOCKS /* any value */),
+        LBQ_THREAD_POOL_EXECUTOR(LockMode.NO_LOCKS /* any value */),
+        LTQ_THREAD_POOL_EXECUTOR(LockMode.NO_LOCKS /* any value */),
         EQE_NO_LOCKS(LockMode.NO_LOCKS),
         EQE_SYNCHRONIZED(LockMode.SYNCHRONIZED),
         EQE_SPIN_LOCK(LockMode.SPIN_LOCK),
@@ -66,11 +77,16 @@ public class ExecutorBenchmarks {
             }
             int coreThreads = Integer.parseInt(coreAndMax[0].trim());
             int maxThreads = Integer.parseInt(coreAndMax[1].trim());
-            if (this == THREAD_POOL_EXECUTOR) {
+            if (this == LBQ_THREAD_POOL_EXECUTOR) {
                 return new ThreadPoolExecutor(coreThreads, maxThreads,
                         1L, TimeUnit.MINUTES,
                         new LinkedBlockingQueue<>(),
                         Executors.defaultThreadFactory());
+            } else if (this == LTQ_THREAD_POOL_EXECUTOR) {
+                return new ThreadPoolExecutor(coreThreads, maxThreads,
+                    1L, TimeUnit.MINUTES,
+                    new LinkedTransferQueue<>(),
+                    Executors.defaultThreadFactory());
             }
             return new EnhancedQueueExecutor.Builder()
                     .setCorePoolSize(coreThreads)
@@ -124,12 +140,58 @@ public class ExecutorBenchmarks {
         }
     }
 
+    @State(Scope.Thread)
+    public static class ExecutingTasks implements Runnable {
+
+        Blackhole blackhole;
+        Future<?>[] pendingTasks;
+        int burstSize;
+
+        @Setup(Level.Iteration)
+        public void init(Blackhole blackhole, ExecutorBenchmarks benchmarks) {
+            burstSize = benchmarks.burstSize;
+            pendingTasks = new FutureTask<?>[benchmarks.burstSize];
+            this.blackhole = blackhole;
+        }
+
+        @Override
+        public void run()
+        {
+            if (DELAY_CONSUMER > 0) {
+                Blackhole.consumeCPU(DELAY_CONSUMER);
+            }
+            // not sure this one is needed
+            blackhole.consume(Thread.currentThread().getId());
+        }
+
+        public void submitBurst(ExecutorService executor)
+        {
+            Future<?>[] pendingTasks = this.pendingTasks;
+            for (int i = 0, size = burstSize; i < size; i++)
+            {
+                pendingTasks[i] = executor.submit(this);
+            }
+        }
+
+        public void awaitBurstCompletion() throws ExecutionException, InterruptedException
+        {
+            Future<?>[] pendingTasks = this.pendingTasks;
+            for (int i = 0, size = burstSize; i < size; i++) {
+                int index = size - (i+1);
+                Future<?> lastTask = pendingTasks[index];
+                pendingTasks[index] = null;
+                lastTask.get();
+            }
+        }
+    }
+
     @Threads(32)
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     @OutputTimeUnit(TimeUnit.SECONDS)
-    public void benchmarkSubmit(Blackhole blackhole) throws Exception {
-        executor.submit(() -> blackhole.consume(Thread.currentThread().getId())).get();
+    public void benchmarkSubmit(ExecutingTasks executingTasks) throws Exception {
+        executingTasks.submitBurst(executor);
+        executingTasks.awaitBurstCompletion();
     }
 
     public static void main(String[] args) throws RunnerException {
