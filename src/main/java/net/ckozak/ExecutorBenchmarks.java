@@ -166,7 +166,7 @@ public class ExecutorBenchmarks {
     @TearDown
     public void tearDown() throws InterruptedException {
         executor.shutdownNow();
-        if (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
+        if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
             throw new IllegalStateException("executor failed to teminate within 1 second");
         }
     }
