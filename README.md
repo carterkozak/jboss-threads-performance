@@ -3,6 +3,8 @@ jboss-threads benchmarking with various lock configurations
 Note: the CoreAffinity.java class shells out to run `taskset -a -p <mask> <java pid>`. This
 requires JRE9+ runtime, however the code can build on jdk8.
 
+*TODO: regenerate full results, this output is very stale!*
+
 Initial results:
 ```
 Benchmark                           (cores)      (lockMode)   Mode  Cnt        Score        Error  Units
