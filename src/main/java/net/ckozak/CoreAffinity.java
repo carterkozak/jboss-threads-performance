@@ -10,9 +10,7 @@ final class CoreAffinity {
                     "Requested " + requestedCores + " cores, but only " + available + " are available");
         }
         try {
-            Class<?> handleClass = Class.forName("java.lang.ProcessHandle");
-            Object handle = handleClass.getMethod("current").invoke(null);
-            long pid = (long) handleClass.getMethod("pid").invoke(handle);
+            long pid = ProcessHandle.current().pid();
             Process process = new ProcessBuilder()
                     .inheritIO()
                     .command("taskset", "-a", "-p", toMask(requestedCores), Long.toString(pid))

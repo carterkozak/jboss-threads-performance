@@ -2,6 +2,7 @@
 .gradle
 build/
 generated_src/
+src/main/generated/
 
 ### Intellij ###
 .idea/
