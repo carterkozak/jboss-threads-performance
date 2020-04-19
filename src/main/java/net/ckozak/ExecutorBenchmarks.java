@@ -232,10 +232,8 @@ public class ExecutorBenchmarks {
                             {
                                 lowerIndexToCheck = deleteCompleted(pendingTasks, lowerIndexToCheck, remaining);
                             } else {
-                                /* TODO: evaluate the fairness of this: it should happen only when
-                                         this task is the very last one */
-                                // Thread::onSpinWait() is a better candidate
-                                Thread.yield();
+                                /* Should happen only when this task is the very last one */
+                                Thread.onSpinWait();
                             }
                         }
                     }
