@@ -39,7 +39,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 // Use a consistent heap and GC configuration to avoid confusion between JVMS with differing GC defaults.
 @Fork(
         value = 1,
-        jvmArgs = {"-Xmx2g", "-Xms2g", "-XX:+UseParallelOldGC", "-XX:-UseBiasedLocking"})
+        jvmArgs = {"-Xmx2g", "-Xms2g", "-XX:+UseParallelOldGC", "-XX:-UseBiasedLocking", "-XX:+UnlockDiagnosticVMOptions", "-XX:+DebugNonSafepoints"})
 public class ExecutorBenchmarks {
 
     // this can be used to avoid the near-empty syndrome
@@ -56,6 +56,9 @@ public class ExecutorBenchmarks {
 
     @Param( {"1", "10", "100"})
     public int burstSize;
+
+    @Param( {"false", "true"})
+    public boolean spinWaitCompletion;
 
     public enum ExecutorType {
         LBQ_THREAD_POOL_EXECUTOR(LockMode.NO_LOCKS /* any value */),
@@ -173,11 +176,13 @@ public class ExecutorBenchmarks {
 
         Future<?>[] pendingTasks;
         int burstSize;
+        boolean spinWaitCompletion;
 
         @Setup(Level.Iteration)
         public void init(ExecutorBenchmarks benchmarks) {
             burstSize = benchmarks.burstSize;
             pendingTasks = new FutureTask<?>[benchmarks.burstSize];
+            spinWaitCompletion = benchmarks.spinWaitCompletion;
         }
 
         @Override
@@ -199,20 +204,72 @@ public class ExecutorBenchmarks {
 
         public void awaitBurstCompletion() throws ExecutionException, InterruptedException
         {
+            // with spinWaitCompletion it attempt to check completion of previous tasks
+            // while awaiting the current task to complete
+            boolean spinWaitCompletion = this.spinWaitCompletion;
             Future<?>[] pendingTasks = this.pendingTasks;
+            int lowerIndexToCheck = 0;
             for (int i = 0, size = burstSize; i < size; i++) {
                 int index = size - (i+1);
+                if (index < lowerIndexToCheck)
+                {
+                    break;
+                }
                 Future<?> lastTask = pendingTasks[index];
-                pendingTasks[index] = null;
-                lastTask.get();
+                if (lastTask != null)
+                {
+                    pendingTasks[index] = null;
+                    if (!spinWaitCompletion)
+                    {
+                        lastTask.get();
+                    }
+                    else
+                    {
+                        while (!lastTask.isDone())
+                        {
+                            final int remaining = index - lowerIndexToCheck;
+                            if (remaining > 0)
+                            {
+                                lowerIndexToCheck = deleteCompleted(pendingTasks, lowerIndexToCheck, remaining);
+                            } else {
+                                /* TODO: evaluate the fairness of this: it should happen only when
+                                         this task is the very last one */
+                                // Thread::onSpinWait() is a better candidate
+                                Thread.yield();
+                            }
+                        }
+                    }
+                }
             }
+        }
+
+        private static int deleteCompleted(Future<?>[] pendingTasks, int start, int length)
+        {
+            int lowWaterMark = start;
+            for (int i = start; i < length; i++)
+            {
+                Future<?> lastTask = pendingTasks[i];
+                // you can still get holes in the middle
+                if (lastTask != null)
+                {
+                    if (lastTask.isDone())
+                    {
+                        pendingTasks[i] = null;
+                        if (lowWaterMark == i)
+                        {
+                            lowWaterMark++;
+                        }
+                    }
+                }
+            }
+            return lowWaterMark;
         }
     }
 
     @Threads(32)
     @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    @OutputTimeUnit(TimeUnit.SECONDS)
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
     public void benchmarkSubmit(ExecutingTasks executingTasks) throws Exception {
         executingTasks.submitBurst(executor);
         executingTasks.awaitBurstCompletion();
