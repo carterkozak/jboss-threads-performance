@@ -45,7 +45,7 @@ public class ExecutorBenchmarks {
     // this can be used to avoid the near-empty syndrome
     static final long DELAY_CONSUMER = Long.getLong("delay.c", 0L);
 
-    @Param({"LTQ_THREAD_POOL_EXECUTOR", "LBQ_THREAD_POOL_EXECUTOR", "EQE_NO_LOCKS", "EQE_SPIN_LOCK"})
+    @Param({"LTQ_THREAD_POOL_EXECUTOR", "LBQ_THREAD_POOL_EXECUTOR", "ENHANCED_QUEUE_EXECUTOR"})
     public ExecutorType factory;
 
     @Param ({ "1", "2", "4", "8", "14", "28" })
@@ -61,19 +61,11 @@ public class ExecutorBenchmarks {
     public boolean spinWaitCompletion;
 
     public enum ExecutorType {
-        LBQ_THREAD_POOL_EXECUTOR(LockMode.NO_LOCKS /* any value */),
-        LTQ_THREAD_POOL_EXECUTOR(LockMode.NO_LOCKS /* any value */),
-        EQE_NO_LOCKS(LockMode.NO_LOCKS),
-        EQE_SPIN_LOCK(LockMode.SPIN_LOCK);
-
-        private final LockMode mode;
-
-        ExecutorType(LockMode mode) {
-            this.mode = mode;
-        }
+        LBQ_THREAD_POOL_EXECUTOR,
+        LTQ_THREAD_POOL_EXECUTOR,
+        ENHANCED_QUEUE_EXECUTOR;
 
         ExecutorService create(String executorThreads) {
-            mode.install();
             String[] coreAndMax = executorThreads.split(",");
             if (coreAndMax.length != 2) {
                 throw new IllegalStateException("Failed to parse " + executorThreads);
@@ -137,24 +129,6 @@ public class ExecutorBenchmarks {
         }
     }
 
-    public enum LockMode {
-        NO_LOCKS,
-        SPIN_LOCK;
-
-        void install() {
-            switch (this) {
-                case NO_LOCKS:
-                    System.setProperty("jboss.threads.eqe.tail-lock", "false");
-                    System.setProperty("jboss.threads.eqe.head-lock", "false");
-                    break;
-                case SPIN_LOCK:
-                    // default
-                    break;
-                default:
-                    throw new IllegalStateException("Unknown state: " + this);
-            }
-        }
-    }
     private ExecutorService executor;
 
     @Setup
@@ -167,7 +141,7 @@ public class ExecutorBenchmarks {
     public void tearDown() throws InterruptedException {
         executor.shutdownNow();
         if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
-            throw new IllegalStateException("executor failed to teminate within 1 second");
+            throw new IllegalStateException("executor failed to terminate within 10 seconds");
         }
     }
 
