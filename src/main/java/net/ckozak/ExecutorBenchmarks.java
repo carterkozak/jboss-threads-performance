@@ -51,7 +51,7 @@ public class ExecutorBenchmarks {
     @Param ({ "1", "2", "4", "8", "14", "28" })
     public int cores;
 
-    @Param ({ "16,16", "100,200" })
+    @Param ({ "16,16", "100,100" })
     public String executorThreads;
 
     @Param( {"1", "10", "100"})
