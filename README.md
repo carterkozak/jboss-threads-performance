@@ -1,63 +1,224 @@
 jboss-threads benchmarking with various lock configurations
 
-Note: the CoreAffinity.java class shells out to run `taskset -a -p <mask> <java pid>`. This
-requires JRE9+ runtime, however the code can build on jdk8.
+Note: the CoreAffinity.java class shells out to run `taskset -a -p <mask> <java pid>`.
 
-*TODO: regenerate full results, this output is very stale!*
-
-Initial results:
+Results using jboss-threads 3.1.1.Final on an Intel Xeon W-2175 CPU:
 ```
-Benchmark                           (cores)      (lockMode)   Mode  Cnt        Score        Error  Units
-ExecutorBenchmarks.benchmarkSubmit        1        NO_LOCKS  thrpt    3   175427.334 ±  99633.942  ops/s
-ExecutorBenchmarks.benchmarkSubmit        1       SPIN_LOCK  thrpt    3   136126.723 ± 832505.826  ops/s
-ExecutorBenchmarks.benchmarkSubmit        1  REENTRANT_LOCK  thrpt    3   166802.606 ± 220491.622  ops/s
-ExecutorBenchmarks.benchmarkSubmit        2        NO_LOCKS  thrpt    3   238119.673 ±  57374.632  ops/s
-ExecutorBenchmarks.benchmarkSubmit        2       SPIN_LOCK  thrpt    3   163173.290 ± 479121.888  ops/s
-ExecutorBenchmarks.benchmarkSubmit        2  REENTRANT_LOCK  thrpt    3   202860.295 ± 224134.046  ops/s
-ExecutorBenchmarks.benchmarkSubmit        4        NO_LOCKS  thrpt    3   389107.805 ± 277479.225  ops/s
-ExecutorBenchmarks.benchmarkSubmit        4       SPIN_LOCK  thrpt    3    82818.469 ±  70899.526  ops/s
-ExecutorBenchmarks.benchmarkSubmit        4  REENTRANT_LOCK  thrpt    3   220755.634 ±   9220.538  ops/s
-ExecutorBenchmarks.benchmarkSubmit        8        NO_LOCKS  thrpt    3   727343.230 ±  73120.671  ops/s
-ExecutorBenchmarks.benchmarkSubmit        8       SPIN_LOCK  thrpt    3   217107.857 ±  31126.494  ops/s
-ExecutorBenchmarks.benchmarkSubmit        8  REENTRANT_LOCK  thrpt    3   211775.638 ±  46812.757  ops/s
-ExecutorBenchmarks.benchmarkSubmit       14        NO_LOCKS  thrpt    3  1112300.950 ± 103541.988  ops/s
-ExecutorBenchmarks.benchmarkSubmit       14       SPIN_LOCK  thrpt    3   204114.786 ±  38581.330  ops/s
-ExecutorBenchmarks.benchmarkSubmit       14  REENTRANT_LOCK  thrpt    3   208072.127 ±  33223.526  ops/s
-ExecutorBenchmarks.benchmarkSubmit       28        NO_LOCKS  thrpt    3  1257170.980 ± 196998.383  ops/s
-ExecutorBenchmarks.benchmarkSubmit       28       SPIN_LOCK  thrpt    3   202660.260 ±  46212.712  ops/s
-ExecutorBenchmarks.benchmarkSubmit       28  REENTRANT_LOCK  thrpt    3   201910.260 ±   1235.492  ops/s
-```
-
-Results using EnhancedQueueExecutor from jboss-threads cebaabe28ddb69f6316229cb44d561871eaa93e9
-```
-Benchmark                           (cores)      (lockMode)   Mode  Cnt        Score        Error  Units
-ExecutorBenchmarks.benchmarkSubmit        1        NO_LOCKS  thrpt    3   177682.503 ±  29152.631  ops/s
-ExecutorBenchmarks.benchmarkSubmit        1       SPIN_LOCK  thrpt    3   138459.142 ± 910710.466  ops/s
-ExecutorBenchmarks.benchmarkSubmit        1  REENTRANT_LOCK  thrpt    3   175306.322 ±  49142.728  ops/s
-ExecutorBenchmarks.benchmarkSubmit        2        NO_LOCKS  thrpt    3   233056.306 ±  97009.830  ops/s
-ExecutorBenchmarks.benchmarkSubmit        2       SPIN_LOCK  thrpt    3   137316.373 ± 934090.351  ops/s
-ExecutorBenchmarks.benchmarkSubmit        2  REENTRANT_LOCK  thrpt    3   195180.037 ±  49247.649  ops/s
-ExecutorBenchmarks.benchmarkSubmit        4        NO_LOCKS  thrpt    3   404299.120 ±  15981.076  ops/s
-ExecutorBenchmarks.benchmarkSubmit        4       SPIN_LOCK  thrpt    3    82607.299 ± 236308.555  ops/s
-ExecutorBenchmarks.benchmarkSubmit        4  REENTRANT_LOCK  thrpt    3   220588.659 ±   9097.295  ops/s
-ExecutorBenchmarks.benchmarkSubmit        8        NO_LOCKS  thrpt    3   719863.985 ±  72185.815  ops/s
-ExecutorBenchmarks.benchmarkSubmit        8       SPIN_LOCK  thrpt    3   217386.154 ±  38372.337  ops/s
-ExecutorBenchmarks.benchmarkSubmit        8  REENTRANT_LOCK  thrpt    3   220711.843 ±  39463.419  ops/s
-ExecutorBenchmarks.benchmarkSubmit       14        NO_LOCKS  thrpt    3  1145361.605 ± 172351.992  ops/s
-ExecutorBenchmarks.benchmarkSubmit       14       SPIN_LOCK  thrpt    3   207927.066 ±  28230.226  ops/s
-ExecutorBenchmarks.benchmarkSubmit       14  REENTRANT_LOCK  thrpt    3   204606.787 ±  57407.248  ops/s
-ExecutorBenchmarks.benchmarkSubmit       28        NO_LOCKS  thrpt    3  1280977.712 ± 167202.094  ops/s
-ExecutorBenchmarks.benchmarkSubmit       28       SPIN_LOCK  thrpt    3   207360.516 ±  19624.459  ops/s
-ExecutorBenchmarks.benchmarkSubmit       28  REENTRANT_LOCK  thrpt    3   206660.768 ±  12704.079  ops/s
-```
-
-Results using `synchronized` (modificaiton on top of cebaabe28ddb69f6316229cb44d561871eaa93e9, not checked in):
-```
-Benchmark                           (cores)    (lockMode)   Mode  Cnt       Score        Error  Units
-ExecutorBenchmarks.benchmarkSubmit        1  SYNCHRONIZED  thrpt    3  174014.211 ±  29150.313  ops/s
-ExecutorBenchmarks.benchmarkSubmit        2  SYNCHRONIZED  thrpt    3  229332.544 ± 111243.731  ops/s
-ExecutorBenchmarks.benchmarkSubmit        4  SYNCHRONIZED  thrpt    3  284431.888 ±  67850.596  ops/s
-ExecutorBenchmarks.benchmarkSubmit        8  SYNCHRONIZED  thrpt    3  405161.611 ±  42873.820  ops/s
-ExecutorBenchmarks.benchmarkSubmit       14  SYNCHRONIZED  thrpt    3  385375.220 ±  38420.860  ops/s
-ExecutorBenchmarks.benchmarkSubmit       28  SYNCHRONIZED  thrpt    3  362371.843 ±  27700.167  ops/s
+Benchmark                           (burstSize)  (cores)  (executorThreads)                 (factory)  (spinWaitCompletion)  Mode  Cnt      Score       Error  Units
+ExecutorBenchmarks.benchmarkSubmit            1        1              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     91.635 ±    10.525  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    191.965 ±    84.842  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     91.199 ±     1.907  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    179.763 ±    22.621  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     95.063 ±    12.733  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   3001.548 ±  6886.712  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    102.223 ±     4.049  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    102.241 ±     6.970  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    103.463 ±     2.199  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    107.896 ±    11.080  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    183.169 ±     9.191  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        1            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   5807.411 ± 17732.583  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     61.109 ±    20.505  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    117.017 ±    51.161  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     91.073 ±     5.319  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4  12810.645 ±  5856.423  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     62.914 ±    20.887  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    824.737 ±    75.740  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     78.685 ±     8.057  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4     88.256 ±    19.076  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     96.813 ±     1.791  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4  20029.234 ±  9625.732  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    138.206 ±    19.348  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        2            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    748.837 ±   630.662  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     43.755 ±     2.677  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4     82.928 ±    21.546  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     77.344 ±     4.239  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   6602.199 ± 10387.636  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     44.357 ±     3.509  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    111.009 ±    12.179  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     49.522 ±     1.247  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4     64.359 ±    26.586  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     78.434 ±     2.334  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   5621.437 ±  3871.953  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     79.159 ±     1.252  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        4            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    115.621 ±    25.351  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     25.528 ±     1.659  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4     47.248 ±     2.538  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     71.072 ±     0.866  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   2043.795 ±   427.924  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     27.726 ±     2.027  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4     22.794 ±     2.080  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     28.205 ±     0.109  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4     32.463 ±     7.910  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     71.859 ±     1.890  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    549.617 ±    56.326  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     39.952 ±     0.536  us/op
+ExecutorBenchmarks.benchmarkSubmit            1        8            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4     23.339 ±     0.961  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     16.194 ±     0.327  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4     22.980 ±     1.691  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     42.279 ±     6.195  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    458.205 ±   150.570  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     42.420 ±     4.679  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4     16.399 ±     3.763  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     18.768 ±     0.937  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4     19.377 ±     1.413  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     44.154 ±     2.870  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    149.828 ±   102.825  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     23.191 ±     0.134  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       14            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4     14.935 ±     0.120  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     12.109 ±     0.156  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4      7.797 ±     0.283  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     40.152 ±     3.872  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4     97.823 ±    13.839  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     26.103 ±     6.857  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4     17.789 ±     0.440  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     25.031 ±     3.801  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4     15.572 ±     1.724  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     40.770 ±     3.661  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4     79.268 ±    29.952  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4     16.643 ±     0.061  us/op
+ExecutorBenchmarks.benchmarkSubmit            1       28            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4     13.380 ±     0.496  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    111.993 ±     2.733  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1747.887 ±   305.720  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    118.256 ±     1.570  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1802.870 ±   388.622  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    110.780 ±     0.696  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4  26757.081 ± 22510.985  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4   1010.275 ±    25.841  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1014.160 ±    77.047  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    180.495 ±   115.145  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1153.735 ±   155.965  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   1027.085 ±    58.639  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        1            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4  22667.636 ± 12097.655  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     92.343 ±    64.448  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1121.604 ±   247.696  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    109.772 ±     1.312  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   4601.014 ±  5029.177  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    113.387 ±    77.362  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   7918.399 ±  1573.373  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    990.399 ±  2377.122  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    738.186 ±   630.733  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    112.312 ±     7.844  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4  15592.243 ± 40312.461  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    969.113 ±   662.417  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        2            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   7324.157 ±  1968.268  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     88.463 ±     7.781  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    768.918 ±    58.387  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     96.845 ±     1.028  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4  11881.897 ±  8437.035  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    137.088 ±    22.439  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   2194.007 ±   371.684  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    642.510 ±   178.477  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    498.309 ±   279.921  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4     99.354 ±     1.446  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   7968.178 ±   962.817  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    449.301 ±     6.503  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        4            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   2108.215 ±   219.561  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    111.634 ±     1.930  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    388.981 ±    68.114  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    122.881 ±     2.697  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1402.539 ±  1230.037  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    281.744 ±    50.613  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    345.501 ±    65.221  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    399.524 ±    61.441  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    267.483 ±    48.630  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    131.208 ±    15.644  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    356.243 ±   790.211  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    167.114 ±     1.526  us/op
+ExecutorBenchmarks.benchmarkSubmit           10        8            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    323.772 ±    99.549  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    103.816 ±     0.924  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    118.756 ±     6.882  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    145.241 ±     6.613  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    253.996 ±   328.750  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    246.316 ±    14.077  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    195.824 ±    31.781  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    261.270 ±    60.839  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    174.224 ±    23.078  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    158.891 ±     2.044  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    188.072 ±    19.389  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    164.481 ±     0.527  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       14            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    153.127 ±     5.323  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4     70.518 ±     5.169  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4     83.105 ±     7.471  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    146.871 ±     1.499  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    156.349 ±    14.758  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    178.803 ±     2.212  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    177.602 ±     3.029  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    176.854 ±    32.689  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    142.354 ±    18.082  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    160.593 ±     8.629  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4    176.743 ±    65.839  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    168.004 ±     0.440  us/op
+ExecutorBenchmarks.benchmarkSubmit           10       28            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4    132.154 ±     6.098  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    333.885 ±    24.177  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4  16709.642 ±  1989.006  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    396.820 ±    13.473  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4  16989.460 ±  2035.966  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    326.059 ±    10.584  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4  82626.664 ±  9193.195  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4  10205.103 ±    15.268  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4  10187.870 ±   615.148  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    433.440 ±    42.445  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4  10878.319 ±  2243.967  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   9800.853 ±   357.533  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        1            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4  81340.353 ±   787.684  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    472.329 ±    16.445  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4  11523.585 ±  3324.262  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    574.193 ±    10.664  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   3373.745 ±  9341.119  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4    567.477 ±    15.237  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4  49911.967 ±  2355.927  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4   6297.026 ±  1268.439  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   7532.288 ±  5508.624  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    783.899 ±    17.339  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1341.617 ±  1158.083  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   3846.562 ±  1338.616  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        2            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4  50118.323 ±  3143.009  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    758.565 ±    31.657  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   7361.646 ±   315.655  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    767.952 ±     4.962  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   3129.187 ± 11802.582  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   1723.618 ±   207.486  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4  14575.157 ±  5124.872  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4   4755.398 ±   313.899  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   4499.437 ±   286.818  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    876.562 ±    35.456  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   2295.950 ±  5402.652  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   2215.454 ±    38.080  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        4            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4  14284.818 ±  3393.453  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4   1187.756 ±    17.687  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   3489.866 ±  1124.924  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    714.286 ±     3.680  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1710.463 ±   254.042  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   2165.424 ±    25.350  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   2290.441 ±   435.843  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4   2732.944 ±   270.900  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   2583.659 ±   139.317  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    762.844 ±     5.603  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1100.567 ±   150.372  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    3   1344.261 ±   182.655  us/op
+ExecutorBenchmarks.benchmarkSubmit          100        8            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   2486.213 ±   263.772  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4   1181.620 ±     6.660  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1210.860 ±    61.325  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    752.391 ±     1.823  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1308.693 ±    78.607  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   2338.351 ±    23.762  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   2129.970 ±   215.565  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4   1714.008 ±   118.380  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1802.564 ±   398.140  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    896.622 ±    11.780  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1186.814 ±   149.707  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   1468.723 ±     2.873  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       14            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   1483.653 ±    83.997  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28              16,16  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4    687.993 ±    22.581  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28              16,16  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4    786.443 ±    99.686  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28              16,16  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    782.210 ±    10.331  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28              16,16  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1035.871 ±    14.944  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28              16,16   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   1742.085 ±    29.187  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28              16,16   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   1860.222 ±    60.163  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28            100,100  LTQ_THREAD_POOL_EXECUTOR                 false  avgt    4   1134.983 ±   218.674  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28            100,100  LTQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1443.062 ±   117.767  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28            100,100  LBQ_THREAD_POOL_EXECUTOR                 false  avgt    4    871.701 ±     7.909  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28            100,100  LBQ_THREAD_POOL_EXECUTOR                  true  avgt    4   1012.487 ±    10.571  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28            100,100   ENHANCED_QUEUE_EXECUTOR                 false  avgt    4   1447.046 ±     7.652  us/op
+ExecutorBenchmarks.benchmarkSubmit          100       28            100,100   ENHANCED_QUEUE_EXECUTOR                  true  avgt    4   1577.570 ±    21.057  us/op
 ```
