@@ -17,5 +17,5 @@ dependencies {
 
 
 application {
-    mainClassName = 'net.ckozak.ExecutorBenchmarks'
+    mainClassName = 'org.openjdk.jmh.Main'
 }
