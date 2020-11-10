@@ -10,9 +10,9 @@ repositories {
 sourceCompatibility = 11
 
 dependencies {
-    compile 'org.jboss.threads:jboss-threads:3.1.1.Final'
-    compile 'org.openjdk.jmh:jmh-core:1.23'
-    annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.23'
+    compile 'org.jboss.threads:jboss-threads:3.2.0.Final'
+    compile 'org.openjdk.jmh:jmh-core:1.26'
+    annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.26'
 }
 
 
